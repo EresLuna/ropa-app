@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#172b3a">
+<title>ROPA | Ventas e inventario</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#172b3a;background:#f3f6f8}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}button,input{font:inherit}
+header{background:#172b3a;color:white;padding:18px 20px;display:flex;justify-content:space-between;align-items:center}
+.brand{font-weight:850;font-size:1.35rem;letter-spacing:.08em}.tag{font-size:.75rem;color:#c6d5df}
+main{max-width:680px;margin:0 auto;padding:22px 16px 40px}
+h1{font-size:1.45rem;margin:8px 0}p{color:#64748b;line-height:1.5}
+.panel,.tile{background:white;border:1px solid #e1e8ed;border-radius:18px;padding:20px;box-shadow:0 5px 18px #172b3a0a}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+.tile{min-height:155px;text-align:left;cursor:pointer;color:#172b3a}
+.tile strong{display:block;font-size:1.08rem;margin:12px 0 5px}.tile span{font-size:2rem}
+.tile small{color:#64748b;line-height:1.4}.tile:active,button:active{transform:scale(.99)}
+label{display:block;font-weight:650;font-size:.9rem;margin:15px 0 7px}
+input{width:100%;padding:13px;border:1px solid #cbd5df;border-radius:11px;background:white}
+button{border:0;border-radius:12px;padding:13px 16px;font-weight:750;cursor:pointer}
+.primary{background:#16845b;color:white;width:100%;margin-top:18px}.secondary{background:#e8eef2;color:#172b3a}
+.link{background:transparent;color:#1762a5;padding:10px 0}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.note{font-size:.82rem;background:#fff8e7;border:1px solid #f0dfb4;padding:12px;border-radius:12px;color:#775719;margin-top:16px}
+.hidden{display:none!important}.eyebrow{font-size:.76rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.badge{font-size:.75rem;background:#e6f5ed;color:#167344;border-radius:30px;padding:5px 9px}
+.item{padding:14px 0;border-bottom:1px solid #e8edf1}.item:last-child{border:0}
+footer{text-align:center;color:#94a3b8;font-size:.75rem;padding:18px}
+@media(max-width:420px){.choices{gap:10px}.tile{padding:15px;min-height:145px}}
+</style>
+</head>
+<body>
+<header><div class="brand">ROPA</div><div class="tag">VENTAS · INVENTARIO</div></header>
+<main>
+<section id="home">
+  <div class="eyebrow">Bienvenido</div><h1>¿Cómo deseas ingresar?</h1>
+  <p>Selecciona el tipo de acceso para continuar.</p>
+  <div class="choices">
+    <button class="tile" onclick="showLogin('vendedor')"><span>🧾</span><strong>Usuario</strong><small>Acceso para vendedores y registro de ventas.</small></button>
+    <button class="tile" onclick="showLogin('admin')"><span>🛠️</span><strong>Administrador</strong><small>Productos, vendedores e historial.</small></button>
+  </div>
+  <div class="note">Etapa 1: estructura visual y navegación. Todavía no guarda usuarios ni ventas; conectaremos la autenticación y Supabase en la siguiente etapa.</div>
+</section>
+
+<section id="login" class="hidden">
+  <button class="link" onclick="goHome()">← Volver al inicio</button>
+  <div class="panel">
+    <div class="eyebrow" id="loginType">Acceso</div><h1 id="loginTitle">Ingresar</h1>
+    <p id="loginHelp">Introduce tus datos para continuar.</p>
+    <form onsubmit="enterApp(event)">
+      <label for="username">Nombre</label><input id="username" autocomplete="username" placeholder="Tu nombre" required>
+      <label for="password">Contraseña</label><input id="password" type="password" autocomplete="current-password" placeholder="Contraseña" required>
+      <button class="primary" type="submit">INGRESAR</button>
+    </form>
+  </div>
+  <div class="note">Las credenciales de esta maqueta son demostrativas. No uses aquí tu contraseña real.</div>
+</section>
+
+<section id="seller" class="hidden">
+  <div class="row"><div><div class="eyebrow">Panel de vendedor</div><h1>Hola, <span id="sellerName"></span></h1></div><span class="badge">Sesión de prueba</span></div>
+  <div class="panel" style="margin-top:16px">
+    <div class="row"><strong>Venta actual</strong><span class="eyebrow">BOB · Bs</span></div>
+    <div class="item"><strong>Escanear prenda</strong><p>En la siguiente etapa conectaremos la cámara y el reconocimiento exacto del catálogo.</p><button class="secondary" style="width:100%" disabled>📷 ESCANEAR PRENDA (próximamente)</button></div>
+    <div class="row item"><span>Productos en la lista</span><strong>0</strong></div>
+    <div class="row"><strong>Total</strong><strong style="font-size:1.5rem">Bs 0,00</strong></div>
+    <label>Método de pago</label><div class="actions"><button class="secondary" type="button">EFECTIVO</button><button class="secondary" type="button">QR</button></div>
+    <button class="primary" disabled>FINALIZAR VENTA (próximamente)</button>
+  </div>
+  <button class="link" onclick="goHome()">Cerrar sesión de prueba</button>
+</section>
+
+<section id="admin" class="hidden">
+  <div class="row"><div><div class="eyebrow">Panel de administración</div><h1>Administrador</h1></div><span class="badge">Vista inicial</span></div>
+  <div class="choices">
+    <div class="tile"><span>📸</span><strong>Registrar prendas</strong><small>Fotografía, nombre y precio.</small></div>
+    <div class="tile"><span>👥</span><strong>Vendedores</strong><small>Crear y administrar accesos.</small></div>
+    <div class="tile"><span>📊</span><strong>Historial del día</strong><small>Ventas, vendedor y forma de pago.</small></div>
+    <div class="tile"><span>📄</span><strong>Exportar CSV</strong><small>Descargar el resumen diario.</small></div>
+  </div>
+  <div class="note">Estas opciones son la estructura inicial. Las conectaremos a la base de datos para que funcionen de verdad.</div>
+  <button class="link" onclick="goHome()">Cerrar sesión de prueba</button>
+</section>
+</main>
+<footer>ROPA · Aplicación web móvil · Etapa 1</footer>
+<script>
+let selectedRole='vendedor';
+function hideAll(){['home','login','seller','admin'].forEach(id=>document.getElementById(id).classList.add('hidden'))}
+function showLogin(role){selectedRole=role;hideAll();document.getElementById('login').classList.remove('hidden');document.getElementById('loginType').textContent=role==='admin'?'Acceso administrador':'Acceso vendedor';document.getElementById('loginTitle').textContent=role==='admin'?'Ingresar como administrador':'Ingresar como vendedor';document.getElementById('loginHelp').textContent=role==='admin'?'Ingresa con las credenciales de administración.':'Ingresa tu nombre y contraseña.'}
+function enterApp(e){e.preventDefault();const name=document.getElementById('username').value.trim();if(selectedRole==='admin'){hideAll();document.getElementById('admin').classList.remove('hidden')}else{document.getElementById('sellerName').textContent=name.toUpperCase();hideAll();document.getElementById('seller').classList.remove('hidden')}}
+function goHome(){hideAll();document.getElementById('home').classList.remove('hidden');document.getElementById('username').value='';document.getElementById('password').value=''}
+</script>
+</body>
+</html>
