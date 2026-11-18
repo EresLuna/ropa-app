@@ -1,692 +1,241 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ROPA - Inventario y ventas</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 18px;
-      font-family: Arial, sans-serif;
-      background: #f5f3f0;
-      color: #292929;
-    }
-    .container { max-width: 650px; margin: auto; }
-    header { text-align: center; padding: 18px 0; }
-    header h1 { letter-spacing: 5px; margin-bottom: 5px; }
-    .card {
-      background: white;
-      padding: 20px;
-      border-radius: 15px;
-      margin: 14px 0;
-      box-shadow: 0 2px 10px #0000000d;
-    }
-    input, select, button {
-      width: 100%;
-      padding: 13px;
-      margin: 7px 0;
-      border-radius: 9px;
-      border: 1px solid #ddd;
-      font-size: 16px;
-    }
-    button {
-      background: #292929;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button.secondary { background: #777; }
-    button.danger { background: #a33; }
-    button:disabled { opacity: .5; }
-    .hidden { display: none !important; }
-    .product, .sale {
-      border-bottom: 1px solid #eee;
-      padding: 12px 0;
-    }
-    .price { font-weight: bold; }
-    .total {
-      font-size: 25px;
-      font-weight: bold;
-      text-align: right;
-      margin: 18px 0;
-    }
-    .muted { color: #777; font-size: 13px; }
-    .row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-    .row button { width: auto; padding: 9px 13px; }
-    .message { padding: 10px; border-radius: 8px; margin: 10px 0; }
-    .error { background: #ffe5e5; color: #9b2222; }
-    .success { background: #e3f5e8; color: #176b32; }
-    h2 { font-size: 20px; }
-    label { display: block; margin-top: 12px; font-size: 14px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROPA - Inventario y ventas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:16px;font-family:Arial,sans-serif;background:#f5f3f0;color:#292929}
+.container{max-width:760px;margin:auto}header{text-align:center;padding:12px 0}header h1{letter-spacing:5px;margin-bottom:4px}
+.card{background:#fff;padding:18px;border-radius:15px;margin:14px 0;box-shadow:0 2px 10px #0000000d}
+input,select,textarea,button{width:100%;padding:12px;margin:6px 0;border-radius:9px;border:1px solid #ddd;font-size:16px}
+textarea{min-height:70px;resize:vertical}button{background:#292929;color:#fff;border:0;cursor:pointer}button.secondary{background:#777}button.danger{background:#a33}button:disabled{opacity:.5}
+.hidden{display:none!important}.muted{color:#777;font-size:13px}.row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.row button{width:auto;padding:9px 12px}.product,.sale{border-bottom:1px solid #eee;padding:12px 0}
+.price,.total{font-weight:bold}.total{font-size:24px;text-align:right;margin:18px 0}
+.message{padding:10px;border-radius:8px;margin:10px 0}.error{background:#ffe5e5;color:#9b2222}.success{background:#e3f5e8;color:#176b32}
+label{display:block;margin-top:10px;font-size:14px;font-weight:bold}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.photo{width:92px;height:112px;object-fit:cover;border-radius:9px;background:#eee}.productline{display:flex;gap:12px;align-items:flex-start}
+.small{font-size:12px;color:#666}.pill{display:inline-block;background:#eee;border-radius:20px;padding:4px 9px;font-size:12px}
+@media(max-width:520px){.grid{grid-template-columns:1fr 1fr}.card{padding:14px}.productline{gap:8px}}
+</style>
 </head>
 <body>
 <div class="container">
+<header><h1>ROPA</h1><p class="muted">Inventario y control de ventas</p></header>
+<div id="message" class="hidden"></div>
 
-  <header>
-    <h1>ROPA</h1>
-    <p class="muted">Inventario y control de ventas</p>
-  </header>
+<section id="login" class="card">
+<h2>Iniciar sesión</h2><p class="muted">Ingresa con tu cuenta autorizada.</p>
+<input id="email" type="email" placeholder="Correo electrónico" autocomplete="username">
+<input id="password" type="password" placeholder="Contraseña" autocomplete="current-password">
+<button onclick="login()">Ingresar</button>
+</section>
 
-  <div id="message"></div>
+<section id="seller" class="hidden">
+<div class="card"><div class="row"><h2>Panel de vendedor</h2><button class="secondary" onclick="logout()">Salir</button></div><p id="sellerName" class="muted"></p></div>
+<div class="card"><h2>Productos disponibles</h2><input id="sellerSearch" placeholder="Buscar por nombre o código" oninput="renderProducts()"><div id="sellerProducts">Cargando...</div></div>
+<div class="card"><h2>Venta actual</h2><div id="cart">Todavía no agregaste productos.</div><div class="total" id="cartTotal">Total: Bs 0.00</div>
+<label>Método de pago</label><select id="payment"><option value="cash">Efectivo</option><option value="qr">QR</option></select>
+<button id="finishSale" onclick="finishSale()">Finalizar venta</button></div>
+<div class="card"><h2>Mis ventas</h2><button class="secondary" onclick="loadMySales()">Actualizar ventas</button><button class="secondary" onclick="exportMySales()">Exportar mis ventas CSV</button><div id="mySales"></div></div>
+</section>
 
-  <!-- INICIO DE SESIÓN -->
-  <section id="login" class="card">
-    <h2>Iniciar sesión</h2>
-    <p class="muted">Ingresa con tu cuenta autorizada.</p>
-    <input id="email" type="email" placeholder="Correo electrónico">
-    <input id="password" type="password" placeholder="Contraseña">
-    <button onclick="login()">Ingresar</button>
-  </section>
-
-  <!-- PANEL VENDEDOR -->
-  <section id="seller" class="hidden">
-    <div class="card">
-      <div class="row">
-        <h2>Panel de vendedor</h2>
-        <button class="secondary" onclick="logout()">Salir</button>
-      </div>
-      <p id="sellerName" class="muted"></p>
-    </div>
-
-    <div class="card">
-      <h2>Productos disponibles</h2>
-      <div id="sellerProducts">Cargando productos...</div>
-    </div>
-
-    <div class="card">
-      <h2>Venta actual</h2>
-      <div id="cart">Todavía no agregaste productos.</div>
-      <div class="total" id="cartTotal">Total: Bs 0.00</div>
-
-      <label>Método de pago</label>
-      <select id="payment">
-        <option value="cash">Efectivo</option>
-        <option value="qr">QR</option>
-      </select>
-
-      <button id="finishSale" onclick="finishSale()">Finalizar venta</button>
-    </div>
-
-    <div class="card">
-      <h2>Mis ventas</h2>
-      <button class="secondary" onclick="loadMySales()">Actualizar ventas</button>
-      <button class="secondary" onclick="exportMySales()">Exportar mis ventas CSV</button>
-      <div id="mySales"></div>
-    </div>
-  </section>
-
-  <!-- PANEL ADMINISTRADOR -->
-  <section id="admin" class="hidden">
-    <div class="card">
-      <div class="row">
-        <h2>Administrador</h2>
-        <button class="secondary" onclick="logout()">Salir</button>
-      </div>
-      <p class="muted">Administración del inventario y las ventas.</p>
-    </div>
-
-    <div class="card">
-      <h2>Registrar producto</h2>
-      <input id="productName" placeholder="Nombre del producto">
-      <input id="productDescription" placeholder="Descripción">
-      <input id="productPrice" type="number" min="0" step="0.01" placeholder="Precio en Bs">
-      <button onclick="addProduct()">Guardar producto</button>
-    </div>
-
-    <div class="card">
-      <h2>Inventario</h2>
-      <button class="secondary" onclick="loadProducts()">Actualizar inventario</button>
-      <div id="adminProducts"></div>
-    </div>
-
-    <div class="card">
-      <h2>Historial de ventas</h2>
-      <button class="secondary" onclick="loadAllSales()">Actualizar historial</button>
-      <button class="secondary" onclick="exportAllSales()">Exportar todas las ventas CSV</button>
-      <div id="allSales"></div>
-    </div>
-  </section>
-
+<section id="admin" class="hidden">
+<div class="card"><div class="row"><h2>Administrador</h2><button class="secondary" onclick="logout()">Salir</button></div><p class="muted">Administración del inventario y las ventas.</p></div>
+<div class="card">
+<h2 id="formTitle">Registrar producto</h2>
+<input id="productCode" placeholder="Código original (ej. P-10235)" autocomplete="off">
+<input id="productName" placeholder="Nombre (ej. Pantalón jean)">
+<div class="grid">
+<div><label>Marca</label><input id="productBrand" placeholder="Marca"></div>
+<div><label>Modelo / corte</label><input id="productModel" placeholder="Recto, skinny..."></div>
+<div><label>Talla</label><input id="productSize" placeholder="38, M, L..."></div>
+<div><label>Tela</label><input id="productFabric" placeholder="Denim, algodón..."></div>
+<div><label>Color</label><input id="productColor" placeholder="Azul oscuro"></div>
+<div><label>Precio (Bs)</label><input id="productPrice" type="number" min="0" step="0.01" placeholder="150"></div>
+<div><label>Existencias</label><input id="productStock" type="number" min="0" step="1" value="1"></div>
+</div>
+<label>Descripción adicional</label><textarea id="productDescription" placeholder="Detalles para distinguir esta prenda"></textarea>
+<label>Fotografía del producto</label>
+<input id="productPhoto" type="file" accept="image/*" capture="environment" onchange="previewPhoto(event)">
+<p class="small">En el celular puedes tomar una foto con la cámara o elegir una imagen. Se guardará en el almacenamiento de Supabase.</p>
+<img id="photoPreview" class="photo hidden" alt="Vista previa">
+<div class="row"><button onclick="saveProduct()">Guardar producto</button><button id="cancelEdit" class="secondary hidden" onclick="resetProductForm()">Cancelar edición</button></div>
+<p class="small">El código puede contener números, letras y guiones. Debe ser único.</p>
+</div>
+<div class="card"><h2>Inventario</h2><input id="adminSearch" placeholder="Buscar por nombre o código" oninput="renderProducts()"><button class="secondary" onclick="loadProducts()">Actualizar inventario</button><div id="adminProducts"></div></div>
+<div class="card"><h2>Historial de ventas</h2><button class="secondary" onclick="loadAllSales()">Actualizar historial</button><button class="secondary" onclick="exportAllSales()">Exportar todas las ventas CSV</button><div id="allSales"></div></div>
+</section>
 </div>
 
 <script>
-  // CONEXIÓN CON SUPABASE
-  const SUPABASE_URL = "https://jjuanclmqkqhenlbewjp.supabase.co";
-  const SUPABASE_KEY = "sb_publishable_d-TjzdBGtkO3AN7wrpMqIQ_8EooQH0g";
-
-  const db = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-  );
-
-  let currentUser = null;
-  let currentProfile = null;
-  let products = [];
-  let cart = [];
-
-  function money(value) {
-    return "Bs " + Number(value || 0).toFixed(2);
-  }
-
-  function escapeHTML(value) {
-    return String(value ?? "").replace(/[&<>"']/g, c => ({
-      "&": "&amp;", "<": "&lt;", ">": "&gt;",
-      '"': "&quot;", "'": "&#39;"
-    })[c]);
-  }
-
-  function showMessage(text, type = "success") {
-    const box = document.getElementById("message");
-    box.className = "message " + type;
-    box.textContent = text;
-    box.classList.remove("hidden");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function clearMessage() {
-    const box = document.getElementById("message");
-    box.textContent = "";
-    box.className = "hidden";
-  }
-
-  function showScreen(screen) {
-    ["login", "seller", "admin"].forEach(id => {
-      document.getElementById(id).classList.add("hidden");
-    });
-    document.getElementById(screen).classList.remove("hidden");
-  }
-
-  async function login() {
-    clearMessage();
-
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-
-    if (!email || !password) {
-      return showMessage("Escribe tu correo y contraseña.", "error");
-    }
-
-    const { data, error } = await db.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      return showMessage("No se pudo iniciar sesión: " + error.message, "error");
-    }
-
-    await loadProfile(data.user);
-  }
-
-  async function loadProfile(user) {
-    currentUser = user;
-
-    const { data, error } = await db
-      .from("profiles")
-      .select("display_name, role")
-      .eq("user_id", user.id)
-      .single();
-
-    if (error || !data) {
-      await db.auth.signOut();
-      currentUser = null;
-      showScreen("login");
-      return showMessage("No se encontró tu perfil autorizado.", "error");
-    }
-
-    currentProfile = data;
-
-    if (data.role === "admin") {
-      showScreen("admin");
-      await loadProducts();
-      await loadAllSales();
-    } else if (data.role === "seller") {
-      showScreen("seller");
-      document.getElementById("sellerName").textContent =
-        "Vendedor: " + data.display_name;
-      cart = [];
-      await loadProducts();
-      await loadMySales();
-    } else {
-      await logout();
-      showMessage("Tu cuenta no tiene un rol válido.", "error");
-    }
-  }
-
-  async function logout() {
-    await db.auth.signOut();
-    currentUser = null;
-    currentProfile = null;
-    cart = [];
-    showScreen("login");
-  }
-
-  // INVENTARIO
-  async function loadProducts() {
-    const { data, error } = await db
-      .from("products")
-      .select("*")
-      .eq("active", true)
-      .order("name");
-
-    if (error) {
-      return showMessage("Error al cargar productos: " + error.message, "error");
-    }
-
-    products = data || [];
-    renderProducts();
-  }
-
-  function renderProducts() {
-    const sellerBox = document.getElementById("sellerProducts");
-    const adminBox = document.getElementById("adminProducts");
-
-    if (sellerBox) {
-      sellerBox.innerHTML = products.length
-        ? products.map(p => `
-          <div class="product">
-            <div class="row">
-              <div>
-                <strong>${escapeHTML(p.name)}</strong>
-                <div class="muted">${escapeHTML(p.description || "")}</div>
-                <div class="price">${money(p.price)}</div>
-              </div>
-              <button onclick="addToCart('${p.id}')">Agregar</button>
-            </div>
-          </div>
-        `).join("")
-        : "<p>No hay productos registrados.</p>";
-    }
-
-    if (adminBox) {
-      adminBox.innerHTML = products.length
-        ? products.map(p => `
-          <div class="product">
-            <strong>${escapeHTML(p.name)}</strong>
-            <p>${escapeHTML(p.description || "")}</p>
-            <div class="row">
-              <span class="price">${money(p.price)}</span>
-              <button onclick="editPrice('${p.id}')">Editar precio</button>
-              <button class="danger" onclick="deactivateProduct('${p.id}')">Desactivar</button>
-            </div>
-          </div>
-        `).join("")
-        : "<p>No hay productos registrados.</p>";
-    }
-  }
-
-  async function addProduct() {
-    const name = document.getElementById("productName").value.trim();
-    const description = document.getElementById("productDescription").value.trim();
-    const price = Number(document.getElementById("productPrice").value);
-
-    if (!name || !Number.isFinite(price) || price <= 0) {
-      return showMessage("Escribe un nombre y un precio válido.", "error");
-    }
-
-    const { error } = await db.from("products").insert({
-      name,
-      description,
-      price,
-      active: true
-    });
-
-    if (error) {
-      return showMessage("No se pudo guardar: " + error.message, "error");
-    }
-
-    document.getElementById("productName").value = "";
-    document.getElementById("productDescription").value = "";
-    document.getElementById("productPrice").value = "";
-
-    showMessage("Producto registrado correctamente.");
-    await loadProducts();
-  }
-
-  async function editPrice(id) {
-    const product = products.find(p => p.id === id);
-    if (!product) return;
-
-    const answer = prompt("Nuevo precio en Bs:", product.price);
-    if (answer === null) return;
-
-    const price = Number(answer);
-    if (!Number.isFinite(price) || price <= 0) {
-      return showMessage("Precio no válido.", "error");
-    }
-
-    const { error } = await db
-      .from("products")
-      .update({ price, updated_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) return showMessage(error.message, "error");
-
-    showMessage("Precio actualizado.");
-    await loadProducts();
-  }
-
-  async function deactivateProduct(id) {
-    if (!confirm("¿Desactivar este producto?")) return;
-
-    const { error } = await db
-      .from("products")
-      .update({ active: false, updated_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) return showMessage(error.message, "error");
-
-    showMessage("Producto desactivado.");
-    await loadProducts();
-  }
-
-  // CARRITO DEL VENDEDOR
-  function addToCart(id) {
-    const product = products.find(p => p.id === id);
-    if (!product) return;
-
-    const existing = cart.find(item => item.product_id === id);
-
-    if (existing) {
-      existing.quantity++;
-    } else {
-      cart.push({
-        product_id: product.id,
-        name: product.name,
-        price: Number(product.price),
-        quantity: 1
-      });
-    }
-
-    renderCart();
-  }
-
-  function changeQuantity(id, amount) {
-    const item = cart.find(p => p.product_id === id);
-    if (!item) return;
-
-    item.quantity += amount;
-    if (item.quantity <= 0) {
-      cart = cart.filter(p => p.product_id !== id);
-    }
-    renderCart();
-  }
-
-  function renderCart() {
-    const box = document.getElementById("cart");
-
-    if (!cart.length) {
-      box.textContent = "Todavía no agregaste productos.";
-    } else {
-      box.innerHTML = cart.map(item => `
-        <div class="product">
-          <strong>${escapeHTML(item.name)}</strong>
-          <div class="row">
-            <span>${money(item.price)} × ${item.quantity}</span>
-            <div>
-              <button onclick="changeQuantity('${item.product_id}', -1)">−</button>
-              <button onclick="changeQuantity('${item.product_id}', 1)">+</button>
-            </div>
-          </div>
-          <strong>${money(item.price * item.quantity)}</strong>
-        </div>
-      `).join("");
-    }
-
-    const total = cart.reduce(
-      (sum, item) => sum + item.price * item.quantity, 0
-    );
-
-    document.getElementById("cartTotal").textContent =
-      "Total: " + money(total);
-  }
-
-  async function finishSale() {
-    if (!cart.length) {
-      return showMessage("Agrega al menos un producto.", "error");
-    }
-
-    const button = document.getElementById("finishSale");
-    button.disabled = true;
-
-    try {
-      // Comprobar los precios actuales antes de registrar.
-      const ids = cart.map(item => item.product_id);
-
-      const { data: currentProducts, error: productError } = await db
-        .from("products")
-        .select("id, price, active")
-        .in("id", ids);
-
-      if (productError) throw productError;
-
-      for (const item of cart) {
-        const latest = currentProducts.find(p => p.id === item.product_id);
-        if (!latest || !latest.active ||
-            Number(latest.price) !== item.price) {
-          throw new Error("Un producto cambió de precio o ya no está activo. Actualiza el inventario.");
-        }
-      }
-
-      const total = cart.reduce(
-        (sum, item) => sum + item.price * item.quantity, 0
-      );
-
-      const { data: sale, error: saleError } = await db
-        .from("sales")
-        .insert({
-          seller_id: currentUser.id,
-          payment_method: document.getElementById("payment").value,
-          total
-        })
-        .select()
-        .single();
-
-      if (saleError) throw saleError;
-
-      const items = cart.map(item => ({
-        sale_id: sale.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.price
-      }));
-
-      const { error: itemsError } = await db
-        .from("sale_items")
-        .insert(items);
-
-      if (itemsError) {
-        throw new Error(
-          "La venta se creó, pero sus detalles no se guardaron. Contacta al administrador. " +
-          itemsError.message
-        );
-      }
-
-      cart = [];
-      renderCart();
-      showMessage("¡Venta guardada correctamente!");
-      await loadMySales();
-
-    } catch (error) {
-      showMessage(error.message, "error");
-    } finally {
-      button.disabled = false;
-    }
-  }
-
-  // HISTORIAL DE VENTAS
-  async function getSales() {
-    const { data, error } = await db
-      .from("sales")
-      .select(`
-        id, seller_id, payment_method, total, created_at,
-        profiles(display_name),
-        sale_items(quantity, unit_price, products(name))
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  }
-
-  function formatSales(sales, target) {
-    const box = document.getElementById(target);
-
-    if (!sales.length) {
-      box.innerHTML = "<p>No hay ventas registradas.</p>";
-      return;
-    }
-
-    box.innerHTML = sales.map(sale => {
-      const date = new Date(sale.created_at).toLocaleString("es-BO");
-      const payment = sale.payment_method === "qr" ? "QR" : "Efectivo";
-      const seller = sale.profiles?.display_name || "Vendedor";
-
-      const details = (sale.sale_items || []).map(item =>
-        `${escapeHTML(item.products?.name || "Producto")} × ${item.quantity}`
-      ).join(", ");
-
-      return `
-        <div class="sale">
-          <strong>${money(sale.total)}</strong>
-          <div class="muted">${date} · ${payment} · ${escapeHTML(seller)}</div>
-          <div>${details}</div>
-        </div>
-      `;
-    }).join("");
-  }
-
-  async function loadMySales() {
-    if (!currentUser) return;
-
-    try {
-      const { data, error } = await db
-        .from("sales")
-        .select(`
-          id, seller_id, payment_method, total, created_at,
-          sale_items(quantity, unit_price, products(name))
-        `)
-        .eq("seller_id", currentUser.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-      formatSales(data || [], "mySales");
-    } catch (error) {
-      showMessage("Error al cargar tus ventas: " + error.message, "error");
-    }
-  }
-
-  async function loadAllSales() {
-    try {
-      const sales = await getSales();
-      formatSales(sales, "allSales");
-    } catch (error) {
-      showMessage("Error al cargar ventas: " + error.message, "error");
-    }
-  }
-
-  // EXPORTAR CSV
-  function downloadCSV(rows, filename) {
-    if (!rows.length) {
-      return showMessage("No hay datos para exportar.", "error");
-    }
-
-    const csv = rows.map(row =>
-      row.map(value =>
-        '"' + String(value ?? "").replace(/"/g, '""') + '"'
-      ).join(";")
-    ).join("\n");
-
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;"
-    });
-
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function exportMySales() {
-    try {
-      const { data, error } = await db
-        .from("sales")
-        .select("id, payment_method, total, created_at")
-        .eq("seller_id", currentUser.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      downloadCSV([
-        ["ID", "Fecha", "Método de pago", "Total Bs"],
-        ...(data || []).map(s => [
-          s.id,
-          new Date(s.created_at).toLocaleString("es-BO"),
-          s.payment_method === "qr" ? "QR" : "Efectivo",
-          s.total
-        ])
-      ], "mis_ventas.csv");
-
-    } catch (error) {
-      showMessage(error.message, "error");
-    }
-  }
-
-  async function exportAllSales() {
-    try {
-      const sales = await getSales();
-
-      downloadCSV([
-        ["ID", "Fecha", "Vendedor", "Método de pago", "Total Bs", "Productos"],
-        ...sales.map(s => [
-          s.id,
-          new Date(s.created_at).toLocaleString("es-BO"),
-          s.profiles?.display_name || "",
-          s.payment_method === "qr" ? "QR" : "Efectivo",
-          s.total,
-          (s.sale_items || []).map(i =>
-            `${i.products?.name || "Producto"} x${i.quantity}`
-          ).join(", ")
-        ])
-      ], "todas_las_ventas.csv");
-
-    } catch (error) {
-      showMessage(error.message, "error");
-    }
-  }
-
-  // RESTAURAR SESIÓN SI YA ESTABA ABIERTA
-  async function startApp() {
-    const { data } = await db.auth.getSession();
-
-    if (data.session) {
-      await loadProfile(data.session.user);
-    } else {
-      showScreen("login");
-    }
-  }
-
-  db.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT") {
-      currentUser = null;
-      currentProfile = null;
-      showScreen("login");
-    }
-  });
-
-  startApp();
+const SUPABASE_URL="https://jjuanclmqkqhenlbewjp.supabase.co";
+const SUPABASE_KEY="sb_publishable_d-TjzdBGtkO3AN7wrpMqIQ_8EooQH0g";
+const STORAGE_BUCKET="product-images";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let currentUser=null,currentProfile=null,products=[],cart=[],editingId=null,selectedPhoto=null;
+
+function money(v){return "Bs "+Number(v||0).toFixed(2)}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function msg(t,type="success"){const b=document.getElementById("message");b.className="message "+type;b.textContent=t;window.scrollTo({top:0,behavior:"smooth"})}
+function clearMsg(){const b=document.getElementById("message");b.textContent="";b.className="hidden"}
+function screen(id){["login","seller","admin"].forEach(x=>document.getElementById(x).classList.add("hidden"));document.getElementById(id).classList.remove("hidden")}
+
+async function login(){
+ clearMsg();const email=document.getElementById("email").value.trim(),password=document.getElementById("password").value;
+ if(!email||!password)return msg("Escribe tu correo y contraseña.","error");
+ const {data,error}=await db.auth.signInWithPassword({email,password});
+ if(error)return msg("No se pudo iniciar sesión: "+error.message,"error");
+ await loadProfile(data.user);
+}
+async function loadProfile(user){
+ currentUser=user;
+ const {data,error}=await db.from("profiles").select("display_name,role").eq("user_id",user.id).single();
+ if(error||!data){await db.auth.signOut();currentUser=null;screen("login");return msg("No se encontró tu perfil autorizado.","error")}
+ currentProfile=data;
+ if(data.role==="admin"){screen("admin");await loadProducts();await loadAllSales()}
+ else if(data.role==="seller"){screen("seller");document.getElementById("sellerName").textContent="Vendedor: "+data.display_name;cart=[];await loadProducts();await loadMySales()}
+ else{await logout();msg("Tu cuenta no tiene un rol válido.","error")}
+}
+async function logout(){await db.auth.signOut();currentUser=null;currentProfile=null;cart=[];screen("login")}
+async function loadProducts(){
+ const {data,error}=await db.from("products").select("*").eq("active",true).order("name");
+ if(error)return msg("Error al cargar productos: "+error.message,"error");
+ products=data||[];renderProducts();
+}
+function photoURL(p){if(!p.image_path)return "";if(p.image_path.startsWith("http"))return p.image_path;return db.storage.from(STORAGE_BUCKET).getPublicUrl(p.image_path).data.publicUrl}
+function renderProducts(){
+ const sellerBox=document.getElementById("sellerProducts"),adminBox=document.getElementById("adminProducts");
+ const term=(document.getElementById("adminSearch")?.value||document.getElementById("sellerSearch")?.value||"").toLowerCase().trim();
+ const filtered=products.filter(p=>[p.name,p.product_code,p.brand,p.model,p.color,p.size].some(x=>String(x||"").toLowerCase().includes(term)));
+ if(sellerBox)sellerBox.innerHTML=filtered.length?filtered.map(p=>`
+ <div class="product"><div class="productline">${p.image_path?`<img class="photo" src="${esc(photoURL(p))}" alt="">`:""}
+ <div><strong>${esc(p.name)}</strong><div class="muted">Código: ${esc(p.product_code||"—")}</div>
+ <div class="muted">${esc([p.brand,p.model,p.size,p.color].filter(Boolean).join(" · "))}</div>
+ <div class="price">${money(p.price)}</div><div class="small">Disponibles: ${Number(p.stock||0)}</div>
+ <button onclick="addToCart('${p.id}')" ${Number(p.stock||0)<=0?"disabled":""}>Agregar</button></div></div></div>`).join(""):"<p>No hay productos encontrados.</p>";
+ if(adminBox)adminBox.innerHTML=filtered.length?filtered.map(p=>`
+ <div class="product"><div class="productline">${p.image_path?`<img class="photo" src="${esc(photoURL(p))}" alt="">`:""}
+ <div style="flex:1"><strong>${esc(p.name)}</strong><div class="muted">Código: ${esc(p.product_code||"—")}</div>
+ <div class="muted">${esc([p.brand,p.model,p.size,p.fabric,p.color].filter(Boolean).join(" · "))}</div>
+ <div>${esc(p.description||"")}</div><div class="price">${money(p.price)} · Stock: ${Number(p.stock||0)}</div>
+ <div class="row"><button onclick="editProduct('${p.id}')">Editar</button><button class="danger" onclick="deactivateProduct('${p.id}')">Desactivar</button></div></div></div></div>`).join(""):"<p>No hay productos encontrados.</p>";
+}
+function previewPhoto(event){
+ const file=event.target.files?.[0];if(!file)return;
+ if(!file.type.startsWith("image/"))return msg("Selecciona un archivo de imagen.","error");
+ if(file.size>8*1024*1024)return msg("La foto debe pesar menos de 8 MB.","error");
+ selectedPhoto=file;const img=document.getElementById("photoPreview");img.src=URL.createObjectURL(file);img.classList.remove("hidden");
+}
+function resetProductForm(){
+ editingId=null;selectedPhoto=null;
+ ["productCode","productName","productBrand","productModel","productSize","productFabric","productColor","productPrice","productDescription"].forEach(id=>document.getElementById(id).value="");
+ document.getElementById("productStock").value="1";document.getElementById("productPhoto").value="";
+ document.getElementById("photoPreview").classList.add("hidden");document.getElementById("formTitle").textContent="Registrar producto";
+ document.getElementById("cancelEdit").classList.add("hidden");
+}
+function editProduct(id){
+ const p=products.find(x=>x.id===id);if(!p)return;editingId=id;selectedPhoto=null;
+ const vals={productCode:p.product_code,productName:p.name,productBrand:p.brand,productModel:p.model,productSize:p.size,productFabric:p.fabric,productColor:p.color,productPrice:p.price,productStock:p.stock,productDescription:p.description};
+ Object.entries(vals).forEach(([k,v])=>document.getElementById(k).value=v??"");
+ document.getElementById("formTitle").textContent="Editar producto";document.getElementById("cancelEdit").classList.remove("hidden");
+ const img=document.getElementById("photoPreview");if(p.image_path){img.src=photoURL(p);img.classList.remove("hidden")}else img.classList.add("hidden");
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+async function uploadPhoto(file){
+ const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+ const path=`${currentUser.id}/${crypto.randomUUID()}.${ext}`;
+ const {error}=await db.storage.from(STORAGE_BUCKET).upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type});
+ if(error)throw error;return path;
+}
+async function saveProduct(){
+ const code=document.getElementById("productCode").value.trim(),name=document.getElementById("productName").value.trim();
+ const price=Number(document.getElementById("productPrice").value),stock=Number(document.getElementById("productStock").value);
+ if(!code||!name)return msg("El código y el nombre son obligatorios.","error");
+ if(!Number.isFinite(price)||price<=0)return msg("Escribe un precio válido.","error");
+ if(!Number.isInteger(stock)||stock<0)return msg("El stock debe ser un número entero igual o mayor que cero.","error");
+ const old=products.find(p=>p.id===editingId);let image_path=old?.image_path||null;
+ const payload={product_code:code,name,brand:val("productBrand"),model:val("productModel"),size:val("productSize"),fabric:val("productFabric"),color:val("productColor"),price,stock,description:val("productDescription"),active:true,updated_at:new Date().toISOString()};
+ try{
+  if(selectedPhoto)image_path=await uploadPhoto(selectedPhoto);
+  payload.image_path=image_path;
+  let result;
+  if(editingId)result=await db.from("products").update(payload).eq("id",editingId);
+  else result=await db.from("products").insert(payload);
+  if(result.error)throw result.error;
+  resetProductForm();msg("Producto guardado correctamente.");await loadProducts();
+ }catch(e){msg(e.message.includes("products_product_code_unique")?"Ese código ya está registrado. Cada prenda debe tener un código único.":"No se pudo guardar: "+e.message,"error")}
+}
+function val(id){return document.getElementById(id).value.trim()}
+async function deactivateProduct(id){
+ if(!confirm("¿Desactivar este producto?"))return;
+ const {error}=await db.from("products").update({active:false,updated_at:new Date().toISOString()}).eq("id",id);
+ if(error)return msg(error.message,"error");msg("Producto desactivado.");await loadProducts();
+}
+
+// Carrito y ventas: conserva el flujo existente de ROPA.
+function addToCart(id){
+ const p=products.find(x=>x.id===id);if(!p)return;
+ const found=cart.find(x=>x.product_id===id),qty=found?.quantity||0;
+ if(qty>=Number(p.stock||0))return msg("No hay más existencias disponibles de esta prenda.","error");
+ if(found)found.quantity++;else cart.push({product_id:p.id,name:p.name,price:Number(p.price),quantity:1});
+ renderCart();
+}
+function changeQuantity(id,amount){
+ const item=cart.find(x=>x.product_id===id),p=products.find(x=>x.id===id);if(!item||!p)return;
+ if(amount>0&&item.quantity>=Number(p.stock||0))return msg("No hay más stock disponible.","error");
+ item.quantity+=amount;if(item.quantity<=0)cart=cart.filter(x=>x.product_id!==id);renderCart();
+}
+function renderCart(){
+ const box=document.getElementById("cart");
+ box.innerHTML=cart.length?cart.map(i=>`<div class="product"><strong>${esc(i.name)}</strong><div class="row"><span>${money(i.price)} × ${i.quantity}</span><div><button onclick="changeQuantity('${i.product_id}',-1)">−</button><button onclick="changeQuantity('${i.product_id}',1)">+</button></div></div><strong>${money(i.price*i.quantity)}</strong></div>`).join(""):"Todavía no agregaste productos.";
+ document.getElementById("cartTotal").textContent="Total: "+money(cart.reduce((s,i)=>s+i.price*i.quantity,0));
+}
+async function finishSale(){
+ if(!cart.length)return msg("Agrega al menos un producto.","error");
+ const button=document.getElementById("finishSale");button.disabled=true;
+ try{
+  const ids=cart.map(i=>i.product_id),{data:latest,error:checkError}=await db.from("products").select("id,price,active,stock").in("id",ids);
+  if(checkError)throw checkError;
+  for(const i of cart){const p=latest.find(x=>x.id===i.product_id);if(!p||!p.active||Number(p.price)!==i.price)throw new Error("Un producto cambió de precio o ya no está activo. Actualiza el inventario.");if(Number(p.stock)<i.quantity)throw new Error("Stock insuficiente para "+i.name)}
+  const total=cart.reduce((s,i)=>s+i.price*i.quantity,0);
+  const {data:sale,error:saleError}=await db.from("sales").insert({seller_id:currentUser.id,payment_method:document.getElementById("payment").value,total}).select().single();
+  if(saleError)throw saleError;
+  const rows=cart.map(i=>({sale_id:sale.id,product_id:i.product_id,quantity:i.quantity,unit_price:i.price}));
+  const {error:itemsError}=await db.from("sale_items").insert(rows);
+  if(itemsError)throw new Error("La venta se creó, pero sus detalles no se guardaron. Contacta al administrador. "+itemsError.message);
+  // El stock se actualiza desde la cuenta del administrador; la política actual no permite al vendedor modificar productos.
+  cart=[];renderCart();msg("¡Venta guardada correctamente!");await loadMySales();
+ }catch(e){msg(e.message,"error")}finally{button.disabled=false}
+}
+async function getSales(){
+ const {data,error}=await db.from("sales").select("id,seller_id,payment_method,total,created_at,profiles(display_name),sale_items(quantity,unit_price,products(name,product_code))").order("created_at",{ascending:false});
+ if(error)throw error;return data||[];
+}
+function formatSales(sales,target){
+ const box=document.getElementById(target);if(!sales.length){box.innerHTML="<p>No hay ventas registradas.</p>";return}
+ box.innerHTML=sales.map(s=>`<div class="sale"><strong>${money(s.total)}</strong><div class="muted">${new Date(s.created_at).toLocaleString("es-BO")} · ${s.payment_method==="qr"?"QR":"Efectivo"} · ${esc(s.profiles?.display_name||"Vendedor")}</div><div>${(s.sale_items||[]).map(i=>`${esc(i.products?.name||"Producto")} (${esc(i.products?.product_code||"sin código")}) × ${i.quantity}`).join(", ")}</div></div>`).join("");
+}
+async function loadMySales(){
+ if(!currentUser)return;try{const {data,error}=await db.from("sales").select("id,seller_id,payment_method,total,created_at,sale_items(quantity,unit_price,products(name,product_code))").eq("seller_id",currentUser.id).order("created_at",{ascending:false});if(error)throw error;formatSales(data||[],"mySales")}catch(e){msg("Error al cargar tus ventas: "+e.message,"error")}
+}
+async function loadAllSales(){try{formatSales(await getSales(),"allSales")}catch(e){msg("Error al cargar ventas: "+e.message,"error")}}
+function downloadCSV(rows,filename){
+ if(!rows.length)return msg("No hay datos para exportar.","error");
+ const csv=rows.map(r=>r.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(";")).join("\n");
+ const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+async function exportMySales(){
+ try{const {data,error}=await db.from("sales").select("id,payment_method,total,created_at").eq("seller_id",currentUser.id).order("created_at",{ascending:false});if(error)throw error;downloadCSV([["ID","Fecha","Método de pago","Total Bs"],...(data||[]).map(s=>[s.id,new Date(s.created_at).toLocaleString("es-BO"),s.payment_method==="qr"?"QR":"Efectivo",s.total])],"mis_ventas.csv")}catch(e){msg(e.message,"error")}
+}
+async function exportAllSales(){
+ try{const sales=await getSales();downloadCSV([["ID","Fecha","Vendedor","Método de pago","Total Bs","Productos"],...sales.map(s=>[s.id,new Date(s.created_at).toLocaleString("es-BO"),s.profiles?.display_name||"",s.payment_method==="qr"?"QR":"Efectivo",s.total,(s.sale_items||[]).map(i=>`${i.products?.name||"Producto"} ${i.products?.product_code||""} x${i.quantity}`).join(", ")])],"todas_las_ventas.csv")}catch(e){msg(e.message,"error")}
+}
+async function startApp(){const {data}=await db.auth.getSession();if(data.session)await loadProfile(data.session.user);else screen("login")}
+db.auth.onAuthStateChange((event)=>{if(event==="SIGNED_OUT"){currentUser=null;currentProfile=null;screen("login")}});
+startApp();
 </script>
 </body>
 </html>
